@@ -4,6 +4,10 @@ const cors = require("cors")
 
 const app = express()
 
+app.get("/", (req,res)=>{
+res.send("SchoolTrade Server Running 🚀")
+});
+
 app.use(express.json())
 app.use(cors())
 
