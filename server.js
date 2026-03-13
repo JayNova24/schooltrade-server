@@ -239,23 +239,4 @@ app.listen(10000,()=>{
 
   console.log("SchoolTrade Server Running")
 
-})  const user = await User.findOne({ email: email })
-
-  if (!user) {
-    return res.json({ message: "User not found" })
-  }
-
-  if (user.password === password) {
-    res.json({ message: "Login successful", user: user })
-  } else {
-    res.json({ message: "Incorrect password" })
-  }
-})
-
-app.get("/",(req,res)=>{
-res.send("SchoolTrade Server Running")
-})
-
-app.listen(3000,()=>{
-console.log("Server running")
 })
