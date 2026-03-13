@@ -10,31 +10,41 @@ const app=express()
 
 app.use(express.json())
 app.use(cors())
-
-let users=[]
-
-app.post("/register",(req,res)=>{
-
-users.push(req.body)
-
-res.json({message:"User registered successfully"})
-
+// User Schema for MongoDB
+const UserSchema = new mongoose.Schema({
+  name: String,
+  email: String,
+  password: String
 })
 
-app.post("/login",(req,res)=>{
+const User = mongoose.model("User", UserSchema)
 
-const user=users.find(u=>u.email===req.body.email)
 
-if(user){
+app.post("/register", async (req, res) => {
+  const user = new User(req.body)
 
-res.json({message:"Login successful"})
+  try {
+    await user.save()
+    res.json({ message: "User registered" })
+  } catch (err) {
+    res.json({ message: "Error saving user" })
+  }
+})
 
-}else{
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body
 
-res.json({message:"User not found"})
+  const user = await User.findOne({ email: email })
 
-}
+  if (!user) {
+    return res.json({ message: "User not found" })
+  }
 
+  if (user.password === password) {
+    res.json({ message: "Login successful", user: user })
+  } else {
+    res.json({ message: "Incorrect password" })
+  }
 })
 
 app.get("/",(req,res)=>{
