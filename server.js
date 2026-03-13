@@ -1,6 +1,11 @@
 const express=require("express")
 const cors=require("cors")
+const mongoose = require("mongoose")
 
+mongoose.connect("mongodb+srv://SchoolTrade_admin:272006@cluster0.zhyg5m5.mongodb.net/schooltrade")
+
+.then(()=>console.log("MongoDB Connected"))
+.catch(err=>console.log(err))
 const app=express()
 
 app.use(express.json())
