@@ -7,236 +7,135 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-/* ---------------- DATABASE CONNECTION ---------------- */
+/* DATABASE CONNECTION */
 
 mongoose.connect("mongodb+srv://SchoolTrade_admin:272006@cluster0.zhyg5m5.mongodb.net/schooltrade")
 
 .then(()=>console.log("MongoDB Connected"))
 .catch(err=>console.log(err))
 
-/* ---------------- USER SCHEMA ---------------- */
 
-const UserSchema = new mongoose.Schema({
+/* SCHEMAS */
 
-  name:String,
-  email:String,
-  password:String,
+const User = mongoose.model("User",{
 
-  sellerStatus:{
-    type:String,
-    default:"free"
-  }
+email:String,
+password:String,
+seller:{type:Boolean,default:false},
+plan:String
 
 })
 
-const User = mongoose.model("User",UserSchema)
+const Product = mongoose.model("Product",{
 
-/* ---------------- PRODUCT SCHEMA ---------------- */
-
-const ProductSchema = new mongoose.Schema({
-
-  name:String,
-  price:Number,
-  description:String,
-  seller:String,
-  email:String,
-  image:String,
-  category:String,
-
-  status:{
-    type:String,
-    default:"pending"
-  },
-
-  views:{
-    type:Number,
-    default:0
-  }
+name:String,
+price:String,
+category:String,
+plan:String,
+seller:String
 
 })
 
-const Product = mongoose.model("Product",ProductSchema)
+/* REGISTER */
 
-/* ---------------- SERVER TEST ---------------- */
+app.post("/register", async(req,res)=>{
 
-app.get("/",(req,res)=>{
-  res.send("SchoolTrade Marketplace API Running")
-})
+const user = new User({
 
-/* ---------------- REGISTER ---------------- */
-
-app.post("/register", async (req,res)=>{
-
-  const user = new User(req.body)
-
-  try{
-
-    await user.save()
-
-    res.json({message:"User registered successfully"})
-
-  }catch(err){
-
-    res.json({message:"Registration failed"})
-
-  }
+email:req.body.email,
+password:req.body.password
 
 })
 
-/* ---------------- LOGIN ---------------- */
+await user.save()
 
-app.post("/login", async (req,res)=>{
-
-  const {email,password} = req.body
-
-  const user = await User.findOne({email})
-
-  if(!user){
-    return res.json({message:"User not found"})
-  }
-
-  if(user.password === password){
-
-    res.json({message:"Login successful",user})
-
-  }else{
-
-    res.json({message:"Incorrect password"})
-
-  }
+res.json({message:"Account created"})
 
 })
 
-/* ---------------- SELLER UPGRADE ---------------- */
 
-app.post("/upgrade-seller", async (req,res)=>{
+/* LOGIN */
 
-  const {email} = req.body
+app.post("/login", async(req,res)=>{
 
-  await User.findOneAndUpdate(
+const user = await User.findOne({
 
-    {email:email},
-
-    {sellerStatus:"pending"}
-
-  )
-
-  res.json({message:"Seller upgrade request submitted"})
+email:req.body.email,
+password:req.body.password
 
 })
 
-/* ---------------- VERIFY SELLER ---------------- */
+if(!user){
 
-app.post("/verify-seller/:id", async (req,res)=>{
+return res.json({success:false})
 
-  await User.findByIdAndUpdate(
+}
 
-    req.params.id,
-
-    {sellerStatus:"verified"}
-
-  )
-
-  res.json({message:"Seller verified"})
+res.json({success:true,user})
 
 })
 
-/* ---------------- ADD PRODUCT ---------------- */
 
-app.post("/add-product", async (req,res)=>{
+/* BECOME SELLER */
 
-  const {email} = req.body
+app.post("/become-seller", async(req,res)=>{
 
-  const user = await User.findOne({email})
+await User.updateOne(
 
-  if(!user){
-    return res.json({message:"User not found"})
-  }
+{email:req.body.email},
 
-  if(user.sellerStatus !== "verified"){
-    return res.json({message:"Seller not verified"})
-  }
+{
+seller:true,
+plan:req.body.plan
+}
 
-  const product = new Product(req.body)
+)
 
-  await product.save()
-
-  res.json({message:"Product submitted for approval"})
+res.json({message:"Seller activated"})
 
 })
 
-/* ---------------- APPROVE PRODUCT ---------------- */
 
-app.post("/approve-product/:id", async (req,res)=>{
+/* ADD PRODUCT */
 
-  await Product.findByIdAndUpdate(
+app.post("/add-product", async(req,res)=>{
 
-    req.params.id,
+const product = new Product({
 
-    {status:"approved"}
-
-  )
-
-  res.json({message:"Product approved"})
-
-})
-
-/* ---------------- GET MARKETPLACE PRODUCTS ---------------- */
-
-app.get("/products", async (req,res)=>{
-
-  const products = await Product.find({status:"approved"})
-
-  res.json(products)
+name:req.body.name,
+price:req.body.price,
+category:req.body.category,
+plan:req.body.plan,
+seller:req.body.seller
 
 })
 
-/* ---------------- GET PRODUCTS BY CATEGORY ---------------- */
+await product.save()
 
-app.get("/products/category/:category", async (req,res)=>{
-
-  const products = await Product.find({
-    category:req.params.category,
-    status:"approved"
-  })
-
-  res.json(products)
+res.json({message:"Product uploaded"})
 
 })
 
-/* ---------------- PRODUCT VIEW COUNTER ---------------- */
 
-app.post("/view-product/:id", async (req,res)=>{
+/* GET PRODUCTS */
 
-  await Product.findByIdAndUpdate(
+app.get("/products", async(req,res)=>{
 
-    req.params.id,
+const products = await Product.find()
 
-    {$inc:{views:1}}
+const priority = {pro:3,moderate:2,basic:1}
 
-  )
+products.sort((a,b)=>priority[b.plan]-priority[a.plan])
 
-  res.json({message:"View counted"})
-
-})
-
-/* ---------------- TRENDING PRODUCTS ---------------- */
-
-app.get("/trending", async (req,res)=>{
-
-  const products = await Product
-  .find({status:"approved"})
-  .sort({views:-1})
-  .limit(10)
-
-  res.json(products)
+res.json(products)
 
 })
 
-/* ---------------- SERVER START ---------------- */
 
-app.listen(10000,()=>{
+/* SERVER */
 
-  console.log("SchoolTrade Server Running")
+app.listen(3000,()=>{
+
+console.log("Server running")
 
 })
